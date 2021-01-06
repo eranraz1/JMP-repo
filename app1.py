@@ -13,55 +13,47 @@
 "validate_defaults":  for the program to work well, all parameters need to be set with values, if message received without some parameters
         the program will set the defaults  values for these missing parameters, all required parameters are maintained
         in the "PARAM.csv" file
-
 *************************************************************************************************************************************
 '''
-v_module = ['Formula_Editor_RIGID_SHORT1','Formula_Editor_RIGID_SHORT2']# load from list 
-modules = []
-for x in range (len(v_module)):
-    try:
-        modules.append(__import__(v_module[x]))
-        print (f'Successfully imported {v_module[x]}')
-        module_name = v_module[x]
-        q= modules[x].getInputMetadata()
-        print(q) 
-    except ImportError:
-        print (f'error importing {v_module[x]}')     
-
 from flask import Flask, request, jsonify, make_response
 import math
 import json
 import datetime as dt
 import csv
 now = dt.datetime.now()
-cash_log = ['2020-12-22-INPUT777777','2020-12-22-INPUT777777','2020-12-22-INPUT777777']
+cash_log = ['2021-01-06-B7777777','2021-01-06-B7777777','2021-01-06-B7777777']
+# ---                   listingd the JMP modules [v_module]
+with open ('JMP_Active_Modules.csv', mode = 'r') as moduls_list:
+    modules_ = csv.reader(moduls_list)
+    v_module = list(rows[0] for rows in modules_)
+print(v_module)
 
-'''
 
-################################  Setting Parameters Lists #################################### 
-param_list = 'PARAM2.csv'
-with open (param_list, mode = 'r') as prm_file:
-    param_valid  = csv.reader(prm_file, quoting=csv.QUOTE_NONNUMERIC)
-    prm_dict_mand = {rows[0]:rows[2] for rows in param_valid}
-    prm_list_mand = [x for x,y in prm_dict_mand.items() if y =='M'] # mandator list
-with open (param_list, mode = 'r') as prm_file:
-    param_valid  = csv.reader(prm_file, quoting=csv.QUOTE_NONNUMERIC)
-    prm_list = list(rows[0] for rows in param_valid) #full param list to match 
-with open (param_list, mode = 'r') as prm_file:
-    param_valid  = csv.reader(prm_file, quoting=csv.QUOTE_NONNUMERIC)
-    prm_trnslt_list = {rows[0]:rows[1] for rows in param_valid}  #translate dict
-with open (param_list, mode = 'r') as prm_file: # bring defaults list values
-    param_valid  = csv.reader(prm_file, quoting=csv.QUOTE_NONNUMERIC)
-    prm_defauld_list = {rows[0]:rows[3] for rows in param_valid}
+# ---              importing all modules according to the list 
+modules = []
+modules_list = []
+for x in range (len(v_module)):
+    try:
+        
+        modules.append(__import__(v_module[x])) 
+        print (f'Successfully imported {v_module[x]}')
+        modules_list.append(v_module[x])
+        module_name = v_module[x]
+        #q= modules[x].getInputMetadata()
+        #print(q) 
+    except ImportError:
+        error_msg = f'error importing {v_module[x]}'
+        print(error_msg)
+print(f'\n ********* modules: {modules}\n')
 
-##############################################################################################
-result = ''
 
-#  ---     Load JSON file for testing   ----
-with open ("RIGID_SHORT1-json_input.json") as json_file:
-    req = json.load(json_file)
-    
-#   is REQ_ID in int &  goes by the format     
+# ---              loading JSON request 
+with open (f'JSON\json_input_example.json') as json_file:
+    req = json.load (json_file)
+print(req)
+
+
+# ---              check REQ_ID   goes by the format - check last digit == average     
 def validate_req_int():
     num = 0
     req_id_temp =  req.get('REQ_ID') 
@@ -71,8 +63,11 @@ def validate_req_int():
     num = math.floor(num/len(req_id))
     if int(req_id[-1]) == num: #check last digit == average
         return True
+    return False
+#print(validate_req_int()) #> True
 
-#  check the number of the same REQ_ID
+
+# ---              check # of the same REQ_ID for date 
 def validate_req_count(c):
    msg_id = (str(now.date()) +'-'+str(req.get('REQ_ID')))
    if msg_id in cash_log:
@@ -80,95 +75,38 @@ def validate_req_count(c):
                cash_log.append(msg_id)
                print(f'cash log : {cash_log}')
                return True
-           return False
+           return False #> will exit with error
    else:
        cash_log.append(msg_id)
        return True
 
-# joining 2 REQ_ID validation
-def all_valid_check():
-    if validate_req_count(8) and validate_req_int():
-        return True #'ID valid ... continue'
+
+# ---              checking  module  exist vs (JSON), if so - checking all param exist
+json_mod_name =''
+def validate_module_vs_json_and_param():
+    global json_mod_name
+    json_mod_name = req.get('JMP_MOD') 
+    if json_mod_name in modules_list:
+        for x in range(len(modules_list)):
+            #print(modules_list[int(x)])
+            if req.get('JMP_MOD') == modules_list[int(x)]:
+                module_param_dict = modules[x].getInputMetadata()
+                for key_module in module_param_dict.keys():
+                    if key_module in req.keys():
+                        continue
+                    else:
+                        result = f'"missing_param" : "{key_module}" '
+                        return result
+                return True
+                
     else:
-        return False #'id_not_valid'
+        result = f'"Module not listed" : "{json_mod_name}"'
+        return result
+result  = Formula_Editor_Rigid_Flex_04_01_2021.score(req,{})
+print(result)
+'''
+result = ''
 
-print (f'prm_list_mand: {prm_list_mand}')
-# validate existence of mandatory! OR unknown! parameters 
-def check_miss_madatory_or_extra_prm():
-    for i in prm_list_mand:
-        if i not in req:
-            print(f'missing mandatory parameter: {i}')
-            return 'error1'
-        else: 
-            for y in req.keys():
-                if y not in prm_list:
-                   print (f'message contain unknown parameter: {y}')
-                   return 'error2'
-                   break
-                # else:
-                #     pass#go to next check
-
-# Getting json values into prm_defauld_list, replacing defaults if exist
-def validate_defaults():
-    for item_prm in prm_defauld_list:
-        if req.get(item_prm):
-            prm_defauld_list[item_prm] = req.get(item_prm)      
-    # create "req" list from the updated prm_defauld_list & converting values !!! to INT/FLOAT !!!
-    req_={}
-    for items in prm_defauld_list:
-        if items == 'DESIGN_LAYERS':
-            req_[items] = float(prm_defauld_list.get(items))
-        else:
-            req_[items] = prm_defauld_list.get(items)
-        if items == 'Assembly_Scrap':
-            req_[items] = float(prm_defauld_list.get(items))
-        else:
-            req_[items] = prm_defauld_list.get(items)
-        if items == 'FINISH_THICKNESS':
-            req_[items] = float(prm_defauld_list.get(items))
-        else:
-            req_[items] = prm_defauld_list.get(items)
-        if items == 'Laser__Holes_qty':
-            req_[items] = float(prm_defauld_list.get(items))
-        else:
-            req_[items] = prm_defauld_list.get(items)
-        if items == 'Lot_Size_PANEL':
-            req_[items] = float(prm_defauld_list.get(items))
-        else:
-            req_[items] = prm_defauld_list.get(items)
-        if items == 'Mechanical__Holes_qty':
-            req_[items] = float(prm_defauld_list.get(items))
-        else:
-            req_[items] = prm_defauld_list.get(items)
-        if items == 'X*Y_PANEL':
-            req_[items] = float(prm_defauld_list.get(items))
-        else:
-            req_[items] = prm_defauld_list.get(items)
-    return req_
-
-
-
-# Translate Key fields > in case JMP file contain variables with backspaces (as "DESIGN LAYERS") 
-def translate_keys(req_):
-    req_2= {}
-    for  x in req_.keys():
-        for n in prm_trnslt_list.keys():
-            if x == n:
-                req_2[prm_trnslt_list.get(n)] = req_.get(n)
-                #print (x, n )
-    return req_2
-
-
-# req_ = validate_defaults()
-# print(f'\n validate_d e f a u l t s >> printing new req_: {req_}\n')
-
-# del prm_defauld_list
-# print('------@@@------')
-# print(f' *** After tranlation: {translate_keys(req_)}')
-########################################################################
-
-
-#print(check_miss_madatory_or_extra_prm())     
     
 
 #print(jmp.score(req,{}))
