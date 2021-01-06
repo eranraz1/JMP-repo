@@ -1,0 +1,103 @@
+# https://www.digitalocean.com/community/tutorials/how-to-serve-flask-applications-with-uswgi-and-nginx-on-ubuntu-18-04
+http://websrvdev-01:5000/
+Ubuntu 20.04.1 LTS
+Websrvdev-01
+10.12.100.145
+--------------------------------------------------
+mkdir -p ~/projects/jmp01
+
+$python3 -m venv jmp01env
+
+source jmp01env/bin/activate
+
+pip install wheel
+
+pip install uwsgi flask
+
+nano ~/projects/jmp01/test.py 
+
+http://websrvdev-01:5000/
+
+nano ~/projects/jmp01/wsgi.py
+
+
+from jmp01 import app # test.py for the app trigger the ws
+
+#********************
+if __name__ == "__main__":
+    app.run()
+
+#*********************
+
+uwsgi --socket 0.0.0.0:5000 --protocol=http -w wsgi:app
+
+deactivate
+
+
+nano ~/projects/jmp01/jmp01.ini
+
+
+***********
+[uwsgi]
+module = wsgi:app
+
+master = true
+processes = 5
+
+socket = jmp01.sock
+chmod-socket = 660
+vacuum = true
+
+die-on-term = true
+***********
+
+sudo nano /etc/systemd/system/jmp01.service
+
+**********
+[Unit]
+Description=uWSGI instance to serve jmp01
+After=network.target
+
+[Service]
+User=eranra
+Group=www-data
+WorkingDirectory=/home/eranra/projects/jmp01
+Environment="PATH=/home/eranra/projects/jmp01/jmp01env/bin"
+ExecStart=/home/eranra/projects/jmp01/jmp01env/bin/uwsgi --ini jmp01.ini
+
+[Install]
+WantedBy=multi-user.target
+**********
+
+
+sudo systemctl start jmp01
+sudo systemctl enable jmp01
+sudo systemctl status jmp01
+
+
+sudo nano /etc/nginx/sites-available/jmp01 # for each project
+
+***************
+server {
+    listen 80;
+    server_name websrvdev-01 websrvdev-01.pcb-il.co.il;
+
+    location / {
+        include uwsgi_params;
+        uwsgi_pass unix:/home/eranra/jmp01/jmp01.sock;
+    }
+}
+***************
+
+sudo ln -s /etc/nginx/sites-available/jmp01 /etc/nginx/sites-enabled
+
+sudo nginx -t
+
+FQA
+sudo journalctl -u jmp01
+
+
+
+
+python3 -m venv /environment
+ 

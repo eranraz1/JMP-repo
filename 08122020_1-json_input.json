@@ -1,0 +1,13 @@
+{
+    "REQ_ID":"B3333333",
+    "NUM_DESIGN_LAYERS" : 4,
+    "EXIST_LASER" : "NO",
+    "EXIST_CU_PASTE" : "NO",
+    "HATS_COUPON_TYPE" : "NONE",
+    "FAI_TYPE" : "NONE",
+    "FINISH_CS" : "CHM_GOLD",
+    "SEL_PLT_CS" : "NONE",
+    "FINISH_PS" : "CHM_GOLD",
+    "CAM_PNL_SIZE_X" : 12,
+    "CAM_PNL_SIZE_Y" : 18
+}
