@@ -1,50 +1,40 @@
 ''' 
 *************************************************************************************************************************************
-                                          Functionality NOTES 
+                                          Functionality NOTES - Ver 2.0.0
 "REQ_ID": format include digits. no length limit, when the last digit is the average of all the digits - rounded down.
         in case the REQ_ID, from some reason does include non-digit characters, the base format still applies, 
         the program will consider only the digits in the string for the calculation
 "validate_req_count": each request need to have different "REQ_ID", the program will not accept more then (c =10) calls with the same 
         "REQ_ID" on the same date (validation list is stored in the program memory)
-"check_miss_madatory_or_extra_prm":  checking that all Mandatory param exit in the message, otherwise response with> 
-        "missing mandatory parameter:[PARAM_ID]" 
-        checking that message doesn’t contain unknown parameters ,otherwise response with>
-        "message contain unknown parameter: [PARAM_ID]"
-"validate_defaults":  for the program to work well, all parameters need to be set with values, if message received without some parameters
-        the program will set the defaults  values for these missing parameters, all required parameters are maintained
-        in the "PARAM.csv" file
 *************************************************************************************************************************************
 '''
+
 from flask import Flask, request, jsonify, make_response
-import math
+import math, glob, csv
 import json
 import datetime as dt
-import csv
+# ---              importing JMP modules from 'pkg' folder & set :'modules_list'
+a = glob.glob("pkg/Formula_Editor_*.py")
+modules_list = [i.strip('pkg\\*.py') for i in a]
+del a
+for i in modules_list:
+    try:
+        __import__(f'pkg.{i}')
+        print (f'Successfully imported {i}')
+    except ImportError:
+        error_msg = f'error importing {i}'
+        print(error_msg)
+print('\n')
+print (modules_list[0])
+print('\n')
 now = dt.datetime.now()
 cash_log = ['2021-01-06-B7777777','2021-01-06-B7777777','2021-01-06-B7777777']
-# ---                   listingd the JMP modules [v_module]
-with open ('JMP_Active_Modules.csv', mode = 'r') as moduls_list:
-    modules_ = csv.reader(moduls_list)
-    v_module = list(rows[0] for rows in modules_)
-print(v_module)
 
-
-# ---              importing all modules according to the list 
-modules = []
-modules_list = []
-for x in range (len(v_module)):
-    try:
-        
-        modules.append(__import__(v_module[x])) 
-        print (f'Successfully imported {v_module[x]}')
-        modules_list.append(v_module[x])
-        module_name = v_module[x]
-        #q= modules[x].getInputMetadata()
-        #print(q) 
-    except ImportError:
-        error_msg = f'error importing {v_module[x]}'
-        print(error_msg)
-print(f'\n ********* modules: {modules}\n')
+# # ---                   listingd the JMP modules [v_module]
+# with open ('JMP_Active_Modules.csv', mode = 'r') as moduls_list:
+#     modules_ = csv.reader(moduls_list)
+#     v_module = list(rows[0] for rows in modules_)
+# print(v_module)
 
 
 # ---              loading JSON request 
@@ -88,52 +78,68 @@ def validate_module_vs_json_and_param():
     json_mod_name = req.get('JMP_MOD') 
     if json_mod_name in modules_list:
         for x in range(len(modules_list)):
-            #print(modules_list[int(x)])
             if req.get('JMP_MOD') == modules_list[int(x)]:
-                module_param_dict = modules[x].getInputMetadata()
+                module_param_dict = __import__(modules_list[int(x)]).getInputMetadata()
                 for key_module in module_param_dict.keys():
                     if key_module in req.keys():
                         continue
                     else:
                         result = f'"missing_param" : "{key_module}" '
                         return result
-                return True
-                
+                return True            
     else:
         result = f'"Module not listed" : "{json_mod_name}"'
         return result
-result  = Formula_Editor_Rigid_Flex_04_01_2021.score(req,{})
-print(result)
-'''
-result = ''
-
-    
-
-#print(jmp.score(req,{}))
-#print(jmp_RIGID_SHORT1.score(translate_keys(req_),{}))
 
 
-#**********************EXEC PLAN*****************************
-print('**********************EXEC PLAN*****************************')
-try: 
-#(all_valid_check())
-#(check_miss_madatory_or_extra_prm())
-#req_ = validate_defaults()
-#req_2 = translate_keys(req_)
-    result  = jmp_RIGID_SHORT1.score(req_2,{})
-    print('\n--------------Result-------------')
-    print(result)
-except  AssertionError as error: 
-    result = f'somrthing went wrong - {error}'
-    print(result)
+def json():
+    if True:#request.is_json:
+        #req = request.get_json()
+        # ---              exec steps
 
-    pass
-finally:
-    pass 
-        
+        if not validate_req_int():
+            msg = "wrong ID format"
+            jmp_result = 999
+            jmp_module = '999'
+        else: 
+            if not validate_req_count(10):
+                    msg = f'too many similar requests'
+                    jmp_result = 999
+                    jmp_module = '999'
+            else:
+                if not validate_module_vs_json_and_param() :
+                    msg = validate_module_vs_json_and_param()
+                    jmp_result = 999
+                    jmp_module = '999'
+                else:
+                    mod_ = req.get('JMP_MOD')
+                    selected_module = __import__(mod_)
+                    msg = 'calc executed'
+                    jmp_result = selected_module.score(req,{})
+                    jmp_module = selected_module
+          
+       # print (f'!!!module:{jmp_module} , score: {jmp_result}, msg: {msg}, REQ_ID:{req.get("REQ_ID")}')                   
+                            
+        response = {
+            "REQ_ID" : req.get("REQ_ID"),
+            "JMP_Result" : jmp_result,
+            "JMP_Module" : jmp_module,
+            "Message" : msg
+            }
+        res = response
+        # res= make_response(jsonify(response), 200) # todo : if result = 999, post code 405
+        return res  # return response as JSON
+            
+    else:
+        res = 'somthong else'#make_response(jsonify({"1.Message":"No json recieved","2.Description": "Message not in recognized json format",}), 400)
+        return res  #'no js
+print('@@@@@@@@@@@@@@@@@@@@@@@@\n')
+print(json())
+
+
 #************************************************************
-
-print('Starting .....')
+'''
+print('Starting Flask.....')
 app = Flask(__name__)
 
 @app.route('/', methods=['GET','POST'])
@@ -143,62 +149,55 @@ def index():
         return jsonify ({'you sent': some_json}), 201
     else:
         return jsonify({"message":"Hi - that's not a valid path"})
-    
 
 @app.route('/jmp/', methods=['GET','POST'])
 def json():
-    if request.is_json: 
-            global req, req_2, req_3,result
-            req = request.get_json()
-            if all_valid_check():
-                check2= check_miss_madatory_or_extra_prm()
-                if check2 != 'False1' or check2 !='False2':
-                    validate_defaults()
-                    req_2 = translate_keys(req_)
-                    result  = jmp_RIGID_SHORT1.score(req_2,{})
-                    #response step----------------
-                    if req.get("EXISTS_LASER_DRILL") == "YES"  :
-                        
-                            response = {
-                                "REQ_ID" : req.get("REQ_ID"),
-                                "EXISTS_LASER_DRILL" : req.get("EXISTS_LASER_DRILL"),
-                                "JMP_Result" : result ,#jmp.score(req,{}),
-                                "JMP_Formula" : "Score1_RIGID_SHORT1",
-                                "FINISH_THICKNESS" : req_2.get("FINISH THICKNESS")
-                            }
-                            res= make_response(jsonify(response), 200)
-                            return res  #"json test 1", 200
-                    else:
-                             response = {
-                                "REQ_ID" : req.get("REQ_ID"),
-                                "DESIGN_LAYERS" : req.get("DESIGN_LAYERS"),
-                                "EXISTS_LASER_DRILL" : req.get("EXISTS_LASER_DRILL"),
-                                    "JMP_Result" : 999,#jmp.score(req,{}),
-                                "JMP_Formula" : "Score2_NO_LASE_DRILL"
-                             }
-                             res= make_response(jsonify(response), 200)
-                             return res  #"json test 1", 200
-                elif check2 == 'False1':
-                    res = make_response(jsonify({"1.Message":f'missing mandatory parameter: {i}',}), 405)
-                    return res  #'no json recieved', 400
-                elif check2 == 'False2':
-                    res = make_response(jsonify({"1.Message": f'message contain unknown parameter: {y}',}), 405)
-                    return res  #'no json recieved', 400
-                else : 
-                    pass
-
+    if request.is_json:
+        req = request.get_json()
+        # ---              exec steps
+        print(' ---              exec steps            --- ')
+        json_mod_name =''
+        if not validate_req_int():
+            msg = "wrong ID format"
+            jmp_result = 999
+            jmp_module = '999'
+        else: 
+            if not validate_req_count(10):
+                    msg = f'too many similar requests'
+                    jmp_result = 999
+                    jmp_module = '999'
             else:
-                res = make_response(jsonify({"1.Message":"id_not_valid","2.Description" : "id format issue, or repetitive req.",}), 405)
-                return res  #'no json recieved', 400
+                if not validate_module_vs_json_and_param() :
+                    msg = validate_module_vs_json_and_param()
+                    jmp_result = 999
+                    jmp_module = '999'
+                else:
+                    mod_ = req.get('JMP_MOD')
+                    selected_module = __import__(mod_)
+                    msg = 'calc executed'
+                    jmp_result = selected_module.score(req,{})
+                    jmp_module = selected_module
+          
+        print (f'!!!module:{jmp_module} , score: {jmp_result}, msg: {msg}, REQ_ID:{req.get("REQ_ID")}')                   
+                            
+        response = {
+            "REQ_ID" : req.get("REQ_ID"),
+            "JMP_Result" : jmp_result,
+            "JMP_Module" : jmp_module,
+            "Message" : msg
+            }
+        res= make_response(jsonify(response), 200) # todo : if result = 999, post code 405
+        return res  # return response as JSON
             
     else:
-        res = make_response(jsonify({"1.Message":"No json recieved","2.Description" : "Message not in recognized json format",}), 400)
+        res = make_response(jsonify({"1.Message":"No json recieved","2.Description"
+                                     : "Message not in recognized json format",}), 400)
         return res  #'no json recieved', 400
 
 
 if __name__ == '__main__':  
     app.run(debug=True)
-'''  
+'''
     # curl -H "Content-Type: Application/json" - X POST -d '{"name":"Eran", "address": "Raz"}' http://127.0.0.1:5000/a
     # D:\PY>python flask_script.py mkjkw
     #https://www.youtube.com/watch?v=VzBtoA_8qm4

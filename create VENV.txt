@@ -1,0 +1,6 @@
+python -m venv env --system-site-packages 
+scripts\activate.bat
+
+
+
+api.support@digikey.com
