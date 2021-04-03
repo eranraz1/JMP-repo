@@ -11,10 +11,10 @@ import math, glob, csv
 import json
 import datetime as dt
 from icecream import ic
-jmp_ver = '2.2.0'
+jmp_ver = '2.2.1'
 # ---              importing JMP modules from 'pkg' folder & set :'modules_list'
 a = glob.glob("pkg/JMP_*.py")
-modules_list = [i.strip('pkg\\*.py') for i in a]
+modules_list = [i.strip('pkg/*.py') for i in a]
 del a
 for i in modules_list:
     try:
@@ -24,7 +24,7 @@ for i in modules_list:
         error_msg = f'error importing {i}'
         print(error_msg)
 print('\n')
-print (modules_list[1])
+#print (modules_list[1])
 print('\n')
 now = dt.datetime.now()
 cash_log = ['2021-01-06-B7777777','2021-01-06-B7777777','2021-01-06-B7777777']
@@ -122,7 +122,7 @@ print(json(req))
 
 
 #************************************************************
-#'''                        END OF TEST > STARTING FLASK  APP 
+'''                        END OF TEST > STARTING FLASK  APP 
 print('Starting Flask.....')
 app = Flask(__name__)
 
@@ -170,7 +170,7 @@ def get_module():
 
 if __name__ == '__main__':  
     app.run(debug=True)
-#'''
+'''
     # curl -H "Content-Type: Application/json" - X POST -d '{"name":"Eran", "address": "Raz"}' http://127.0.0.1:5000/a
     # D:\PY>python flask_script.py mkjkw
     #https://www.youtube.com/watch?v=VzBtoA_8qm4

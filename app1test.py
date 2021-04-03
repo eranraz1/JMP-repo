@@ -10,7 +10,7 @@ from flask import Flask, request, jsonify, make_response
 import math, glob, csv
 import json
 import datetime as dt
-from icecream import ic
+#from icecream import ic
 jmp_ver = '2.2.0'
 # ---              importing JMP modules from 'pkg' folder & set :'modules_list'
 a = glob.glob("pkg/JMP_*.py")
@@ -37,38 +37,38 @@ cash_log = ['2021-01-06-B7777777','2021-01-06-B7777777','2021-01-06-B7777777']
 
 
 # ---              loading JSON request 
-with open (f'JSON\json_input_example.json') as json_file:
-    req = json.load (json_file)
-print('\n--------- print req file-values ----------\n')
-print(req)
+# with open (f'JSON\json_input_example.json') as json_file:
+#     req = json.load (json_file)
+# print('\n--------- print req file-values ----------\n')
+# print(req)
 
 
-# ---              check REQ_ID   goes by the format - check last digit == average     
-def validate_req_int():
-    num = 0
-    req_id_temp =  req.get('REQ_ID') 
-    req_id = [i for i in req_id_temp if i.isdigit()]
-    for i in req_id:
-       num = int(i) + num
-    num = math.floor(num/len(req_id))
-    if int(req_id[-1]) == num: #check last digit == average
-        return True
-    return False
-#print(validate_req_int()) #> True
+# # ---              check REQ_ID   goes by the format - check last digit == average     
+# def validate_req_int():
+#     num = 0
+#     req_id_temp =  req.get('REQ_ID') 
+#     req_id = [i for i in req_id_temp if i.isdigit()]
+#     for i in req_id:
+#        num = int(i) + num
+#     num = math.floor(num/len(req_id))
+#     if int(req_id[-1]) == num: #check last digit == average
+#         return True
+#     return False
+# #print(validate_req_int()) #> True
 
 
-# ---              check # of the same REQ_ID for date 
-def validate_req_count(c):
-   msg_id = (str(now.date()) +'-'+str(req.get('REQ_ID')))
-   if msg_id in cash_log:
-           if cash_log.count(msg_id) <= int(c):
-               cash_log.append(msg_id)
-               print(f'cash log : {cash_log}')
-               return True
-           return False #> will exit with error
-   else:
-       cash_log.append(msg_id)
-       return True
+# # ---              check # of the same REQ_ID for date 
+# def validate_req_count(c):
+#    msg_id = (str(now.date()) +'-'+str(req.get('REQ_ID')))
+#    if msg_id in cash_log:
+#            if cash_log.count(msg_id) <= int(c):
+#                cash_log.append(msg_id)
+#                print(f'cash log : {cash_log}')
+#                return True
+#            return False #> will exit with error
+#    else:
+#        cash_log.append(msg_id)
+#        return True
 
 
 # ---              checking  module  exist vs (JSON), if so - checking all param exist
@@ -116,9 +116,9 @@ def json(req):
     else:
         res = 'somthong else'#make_response(jsonify({"1.Message":"No json recieved","2.Description": "Message not in recognized json format",}), 400)
     return res  #'no js
-print('\n--------- print jmp function ----------\n')
+#print('\n--------- print jmp function ----------\n')
 #print (validate_module_vs_json_and_param())
-print(json(req))
+#print(json(req))
 
 
 #************************************************************
